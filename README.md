@@ -1,7 +1,7 @@
 # Containerization-and-devops-lab
 
- Name - Varnika Singh
- Sap id - 500120368 
+ Name - Varnika Singh,
+ Sap id - 500120368,
  Batch - 3
 
 ## LAB   
