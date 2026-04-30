@@ -31,11 +31,10 @@
 | 3 | [Experiment 3 – Deploying NGINX Using Different Base Images & Layer Comparison](lab/Exp3/intro.md) | Dockerfiles, image layers |
 | 4 | [Experiment 4 – Docker Essentials](lab/Exp4/exp4-docker-essentials.md) | Docker commands, images, volumes |
 | 5 | [Experiment 5 – Docker Volumes, Environment Variables, Monitoring & Networks](lab/Exp5/intro.md) | Volumes, env vars, networking |
-| 6 | [Experiment 6 – Docker Compose vs Docker Run](lab/Exp6/intro.md) | Docker Compose, YAML configs |
-| 7 | [Experiment 7 – CI/CD using Jenkins, GitHub and Docker Hub](lab/Exp7/intro.md) | Jenkins, CI/CD pipelines, webhooks |
-| 9 | [Experiment 9 – Ansible](lab/Exp9/intro.md) | Ansible, playbooks, automation |
-| 10 | [Experiment 10 – SonarQube Static Code Analysis](lab/Exp10/intro.md) | SonarQube, code quality, Quality Gates |
-
+| 6 | [Experiment 6 – Docker Compose vs Docker Run](lab/Exp6/exp6%20intro.md) | Docker Compose, YAML configs |
+| 7 | [Experiment 7 – CI/CD using Jenkins, GitHub and Docker Hub](lab/Exp7/exp7%20intro.md) | Jenkins, CI/CD pipelines, webhooks |
+| 9 | [Experiment 9 – Ansible](lab/Exp%209/exp9%20intro.md) | Ansible, playbooks, automation |
+| 10 | [Experiment 10 – SonarQube Static Code Analysis](lab/Exp10/exp10%20intro.md) | SonarQube, code quality, Quality Gates |
 ---
 
 ## 🛠️ Tools & Technologies
