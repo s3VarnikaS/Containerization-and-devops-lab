@@ -92,6 +92,18 @@
 
 ---
 
+### 🧪 Experiment 11
+🔗 [Docker Swarm Orchestration](lab/Exp11/intro.md)  
+📌 *Docker Swarm, clustering, service orchestration*
+
+---
+
+### 🧪 Experiment 12
+🔗 [Kubernetes Deployment and Orchestration](lab/Exp12/intro2.md)  
+📌 *Kubernetes, Pods, Deployments, Services, Scaling*
+
+---
+
 ## ✨ Key Highlights
 
 ✔ Hands-on DevOps experiments  
