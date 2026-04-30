@@ -1,396 +1,510 @@
-# Experiment 11: Docker Swarm — Orchestration and Container Management
-
 ## Name: Varnika Singh
 
-Sap-ID: 500120368
+Sap-ID: 500120368,
 School of Computer Science,
 University of Petroleum and Energy Studies, Dehradun
 
 ## EXPERIMENT – 11
-Docker Swarm — Container Orchestration, Clustering, and Service Management
+Container Orchestration with Docker Stack
 
 ## Aim
-To install, configure, and manage Docker Swarm, deploy containerized services across multiple nodes, and understand container orchestration, load balancing, and scaling in a clustered environment.
+To understand and implement Docker Stack for orchestrating multi-container applications, deploy services across a Docker Swarm cluster, and manage container lifecycle including scaling, failover, and service management.
 
 ## Objectives
 
-- To understand the concepts of container orchestration and clustering
-- To initialize and configure a Docker Swarm cluster
-- To join nodes to the swarm
-- To deploy services across multiple nodes
-- To perform service scaling and management
-- To understand load balancing in Docker Swarm
-- To manage and troubleshoot swarm services
+- To understand the progression from `docker run` to Docker Compose to Docker Swarm to Kubernetes
+- To initialize and configure Docker Swarm mode
+- To deploy multi-container applications using Docker Stack
+- To scale services dynamically
+- To understand automatic failover and self-healing
+- To manage and remove deployed stacks
+- To compare different orchestration tools for various use cases
 
 ## Theory
 
-### What is Docker Swarm?
-
-Docker Swarm is a native orchestration tool for Docker that allows you to manage multiple Docker containers across multiple machines. It turns a group of Docker engines into a single virtual Docker engine.
-
-**Key Characteristics:**
-
-- **Container Orchestration**: Automatically schedules and deploys containers across nodes
-- **Clustering**: Combines multiple Docker hosts into a single cluster
-- **Service Deployment**: Abstracts away individual containers and works with services
-- **Automatic Scheduling**: Places containers on available nodes based on resource requirements
-- **Load Balancing**: Distributes traffic across replicated services
-- **Scaling**: Easily scale services up or down
-- **High Availability**: Ensures services are always running, replacing failed containers
-
-### Docker Swarm vs Kubernetes
-
-| Feature | Docker Swarm | Kubernetes |
-|---------|--------------|-----------|
-| Learning Curve | Easy | Steep |
-| Setup Complexity | Simple | Complex |
-| Scalability | Medium | Enterprise-grade |
-| Orchestration | Basic | Advanced |
-| Best For | Small to Medium teams | Large, complex deployments |
-
-### Core Concepts
-
-**Swarm**: A cluster of Docker daemons running in swarm mode
-**Node**: A Docker instance participating in the swarm (Manager or Worker)
-**Manager Node**: Controls the swarm, maintains cluster state, assigns tasks
-**Worker Node**: Executes tasks assigned by managers
-**Service**: An abstraction that defines how to run a Docker image in the swarm
-**Task**: An individual container running as part of a service
-**Stack**: A group of services that make up an application
-
-### Swarm Architecture
+### Evolution of Container Orchestration
 
 ```
-┌─────────────────────────────────────────────┐
-│         Docker Swarm Cluster                │
-├─────────────────────────────────────────────┤
-│                                             │
-│  ┌──────────────────┐  ┌──────────────────┐ │
-│  │  Manager Node 1  │  │  Manager Node 2  │ │
-│  │  (Raft State)    │◄─►(Replicated)     │ │
-│  └──────────────────┘  └──────────────────┘ │
-│         ▲                       ▲            │
-│         │                       │            │
-│   ┌─────┴───────┬───────────────┴─────┐     │
-│   │             │                     │     │
-│   ▼             ▼                     ▼     │
-│┌──────────┐ ┌──────────┐ ┌──────────┐      │
-││Worker 1  │ │Worker 2  │ │Worker 3  │      │
-│└──────────┘ └──────────┘ └──────────┘      │
-│                                             │
-└─────────────────────────────────────────────┘
+docker run  →  Docker Compose  →  Docker Swarm  →  Kubernetes
+   │               │                  │                │
+Single container  Multi-container    Orchestration    Advanced
+                 (single host)       (basic)         orchestration
 ```
+
+**docker run**: Deploy a single container on a single host
+**Docker Compose**: Deploy multi-container applications on a single host
+**Docker Swarm**: Deploy multi-container applications across multiple hosts with orchestration
+**Kubernetes**: Enterprise-grade orchestration with advanced features
+
+### Docker Stack
+
+Docker Stack is a feature of Docker Swarm that allows you to:
+- Define multi-service applications using Docker Compose files
+- Deploy services across a cluster of Docker nodes
+- Automatically manage container placement, scaling, and health
+- Provide built-in load balancing and networking
+
+### Use Cases by Deployment Environment
+
+```
+Development ──────► Compose
+Testing     ──────► Compose
+Small Production ─► Swarm
+Large Production ─► Kubernetes
+```
+
+**Docker Compose**: Used for local development and testing on a single machine
+**Docker Swarm**: Ideal for small to medium production deployments
+**Kubernetes**: Required for large-scale, complex production environments
+
+### Key Differences: `docker stack deploy` vs `docker compose up`
+
+| Feature | `docker compose up` | `docker stack deploy` |
+|---------|-------------------|----------------------|
+| Single Host | Yes | No (Swarm only) |
+| Multiple Hosts | No | Yes |
+| Orchestration | Basic | Full |
+| Scaling | Manual | Automatic |
+| Failover | Manual | Automatic |
+| Networking | Bridge | Overlay |
 
 ## Software Requirements
 
 - Docker Desktop or Docker Engine with Swarm support
-- Multiple Docker nodes (can be on same machine for testing)
-- Linux OS or WSL (Windows Subsystem for Linux) with Docker
+- Ubuntu (WSL distribution) or Linux OS
+- Docker Compose file from previous experiment
 
 ## Procedure / Steps to Perform the Experiment
 
-### Step 1: Initialize Docker Swarm
+### Step 1: Review Docker Compose File (from Experiment 6)
 
-Initialize the first node as a manager:
+Use the docker-compose.yml from your previous WordPress experiment:
 
-```bash
-docker swarm init --advertise-addr <MANAGER_IP>
+```yaml
+# docker-compose.yml
+version: '3.9'
+
+services:
+  db:
+    image: mysql:5.7
+    container_name: wordpress_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wpuser
+      MYSQL_PASSWORD: wppass
+    volumes:
+      - db_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress_app
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+    restart: always
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wpuser
+      WORDPRESS_DB_PASSWORD: wppass
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+
+volumes:
+  db_data:
+  wp_data:
 ```
 
-Example:
+### Step 2: Clean Up Previous Compose Setup
+
+Stop any existing compose setup to avoid conflicts:
+
 ```bash
-docker swarm init --advertise-addr 192.168.1.100
+docker compose down -v
+```
+
+Verify no containers are running:
+
+```bash
+docker ps
+```
+
+![](Task%201.png)
+
+### Step 3: Initialize Docker Swarm
+
+Initialize Swarm mode on your machine:
+
+```bash
+docker swarm init
+```
+
+**Output:**
+```
+Swarm initialized: current node (xxxxx) is now a manager.
 ```
 
 ![](swarm%20initialization.png)
 
 This command:
-- Initializes the swarm
-- Designates this node as a manager
-- Outputs a join token for worker nodes
-- Sets up the cluster state management
+- Enables Swarm mode on the Docker daemon
+- Makes the current node a manager
+- Creates the Swarm cluster
+- Generates tokens for joining worker nodes
 
-### Step 2: Get Join Tokens
+### Step 4: Verify Swarm Status
 
-To add worker nodes to the swarm, you need the join token:
-
-**For Worker Nodes:**
-```bash
-docker swarm join-token worker
-```
-
-**For Additional Manager Nodes:**
-```bash
-docker swarm join-token manager
-```
-
-These commands display the exact command to run on other nodes to join the swarm.
-
-### Step 3: Join Worker Nodes to Swarm
-
-On other machines/nodes, run the join command:
-
-```bash
-docker swarm join --token SWMTKN-1-xxxxx <MANAGER_IP>:2377
-```
-
-Example:
-```bash
-docker swarm join --token SWMTKN-1-5di8g6iou2e6q8 192.168.1.100:2377
-```
-
-### Step 4: List Nodes in the Swarm
-
-From the manager node, view all connected nodes:
+List all nodes in the swarm:
 
 ```bash
 docker node ls
 ```
 
+**Output:**
+```
+ID                            HOSTNAME    STATUS    AVAILABILITY   MANAGER STATUS
+xxxxxxxxxxxx                   your-pc     Ready     Active         Leader
+```
+
 ![](list%20of%20nodes.png)
 
-This displays:
-- Node ID
-- Hostname
-- Status (Ready/Down)
-- Availability (Active/Drain)
-- Manager Status (Leader/Reachable for managers)
+The current node appears as a Leader with Active availability.
 
-### Step 5: Create a Docker Compose File for Multi-Service Deployment
+### Step 5: Deploy Stack Using Docker Compose File
 
-Create a `docker-compose.yml` file to define services:
-
-```yaml
-version: '3.8'
-
-services:
-  web:
-    image: nginx:latest
-    ports:
-      - "8080:80"
-    deploy:
-      replicas: 3
-      placement:
-        constraints: [node.role == worker]
-    networks:
-      - webnet
-
-  database:
-    image: postgres:13
-    environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin123
-    deploy:
-      replicas: 1
-      placement:
-        constraints: [node.role == manager]
-    networks:
-      - webnet
-
-networks:
-  webnet:
-    driver: overlay
-```
-
-![](.yml%20file.png)
-
-### Step 6: Deploy the Stack
-
-Deploy the services to the swarm:
+Deploy the WordPress application as a stack:
 
 ```bash
-docker stack deploy -c docker-compose.yml mystack
+docker stack deploy -c docker-compose.yml wpstack
 ```
 
-This creates:
-- A network connecting all services
-- Service replicas across available nodes
-- Load balancing across replicas
+**Output:**
+```
+Creating network wpstack_default
+Creating service wpstack_db
+Creating service wpstack_wordpress
+```
 
 ![](deploy%20group%20of%20service.png)
 
-### Step 7: List Services in the Stack
+The `-c` flag specifies the compose file, and `wpstack` is the stack name.
 
-View all running services:
+### Step 6: List Deployed Services
+
+View all services in the stack:
 
 ```bash
 docker service ls
+```
+
+**Output:**
+```
+ID             NAME                MODE         REPLICAS   IMAGE
+xxxxx          wpstack_db          replicated   1/1        mysql:5.7
+xxxxx          wpstack_wordpress   replicated   1/1        wordpress:latest
 ```
 
 ![](list%20of%20services.png)
 
 This shows:
 - Service name
-- Replicas (current/desired)
-- Image name
-- Port mappings
+- Replication mode
+- Current/desired replicas
+- Image used
 
-### Step 8: Check Service Details
+### Step 7: Check Service Tasks
 
-Get detailed information about a specific service:
+View the individual tasks (containers) running for a service:
 
 ```bash
-docker service ps mystack_web
+docker service ps wpstack_wordpress
 ```
 
-This displays:
-- Task ID
-- Node where task is running
-- Current state
-- Error messages (if any)
-
-### Step 9: Scale a Service
-
-Increase or decrease the number of replicas:
-
-```bash
-docker service scale mystack_web=5
+**Output:**
+```
+ID             NAME                  IMAGE              NODE     DESIRED STATE   CURRENT STATE
+xxxxx          wpstack_wordpress.1   wordpress:latest   your-pc   Running         Running
 ```
 
-![](service%20scale.png)
+This shows which node is running each replica and the current state.
 
-This changes the desired replica count to 5. Swarm automatically:
-- Schedules new containers on available nodes
-- Maintains the desired state
-- Removes containers if scaling down
+### Step 8: Verify Containers
 
-![](docker%20ps(after%20scailing).png)
-
-### Step 10: Test Load Balancing
-
-Access the service through the load balancer:
+List all running containers:
 
 ```bash
-curl http://localhost:8080
+docker ps
+```
+
+**Output:**
+```
+CONTAINER ID        IMAGE               STATUS              NAMES
+xxxxx               wordpress:latest    Up 2 minutes        wpstack_wordpress.1.xxxxx
+yyyyy               mysql:5.7           Up 2 minutes        wpstack_db.1.xxxxx
+```
+
+### Step 9: Test Application
+
+Access the WordPress application at:
+
+```
+http://localhost:8080
 ```
 
 ![](local%20host.png)
 
-Docker Swarm automatically:
-- Routes requests to any available replica
-- Balances load across replicas
-- Handles failover if a node goes down
+You should see the WordPress installation page.
 
-### Step 11: Stop and Remove Services
+### Step 10: Scale the WordPress Service
 
-Stop a running service container:
+Increase the number of WordPress replicas to 3:
 
 ```bash
-docker kill <CONTAINER_ID>
+docker service scale wpstack_wordpress=3
 ```
 
-![](docker%20kill.png)
-
-Check containers after kill:
-
-```bash
-docker ps -a | grep mystack_web
+**Output:**
+```
+wpstack_wordpress scaled to 3
+overall progress: 3 out of 3 tasks
 ```
 
-![](docker%20ps%20after%20kill.png)
+![](service%20scale.png)
 
-The scheduler automatically restarts the service to maintain the desired replica count.
-
-### Step 12: Remove Services
-
-Remove a service from the swarm:
-
-```bash
-docker service rm mystack_web
-```
-
-This removes all containers running the service across all nodes.
-
-### Step 13: Remove Stack
-
-Remove all services in a stack:
-
-```bash
-docker stack rm mystack
-```
-
-![](stack%20rm.png)
-
-Check that services are removed:
+Check the updated service status:
 
 ```bash
 docker service ls
 ```
 
+**Output:**
+```
+ID             NAME                MODE         REPLICAS   IMAGE
+xxxxx          wpstack_wordpress   replicated   3/3        wordpress:latest
+```
+
+### Step 11: Verify Scaled Services
+
+View all tasks for the scaled service:
+
+```bash
+docker service ps wpstack_wordpress
+```
+
+Check running containers:
+
+```bash
+docker ps | grep wordpress
+```
+
+![](docker%20ps(after%20scailing).png)
+
+All three WordPress containers should be running.
+
+### Step 12: Test Load Balancing
+
+Access the application multiple times:
+
+```bash
+localhost:8080
+```
+
+Docker Swarm automatically distributes requests across all three replicas.
+
+### Step 13: Simulate Container Failure
+
+Kill one of the running WordPress containers:
+
+```bash
+docker ps | grep wordpress
+docker kill <container-id>
+```
+
+Example:
+```bash
+docker kill a1b2c3d4e5f6
+```
+
+![](docker%20kill.png)
+
+### Step 14: Observe Automatic Failover
+
+Check the service status:
+
+```bash
+docker service ps wpstack_wordpress
+```
+
+**Output:**
+```
+ID             NAME                      IMAGE              NODE     DESIRED STATE   CURRENT STATE
+xxxxx          wpstack_wordpress.1       wordpress:latest   your-pc   Running         Running
+yyyyy          wpstack_wordpress.2       wordpress:latest   your-pc   Running         Running
+zzzzz          wpstack_wordpress.3       wordpress:latest   your-pc   Running         Running
+aaaaa          \_ wpstack_wordpress.3    wordpress:latest   your-pc   Shutdown        Failed 5 seconds ago
+```
+
+![](docker%20grep(after%20kill).png)
+
+The failed container is automatically replaced with a new one to maintain the desired state (3 replicas).
+
+### Step 15: Verify Application Still Running
+
+Check that WordPress is still accessible:
+
+```bash
+docker ps | grep wordpress
+```
+
+![](docker%20ps%20after%20kill.png)
+
+All three containers are still running, demonstrating self-healing.
+
+### Step 16: Remove the Stack
+
+Remove all services and clean up:
+
+```bash
+docker stack rm wpstack
+```
+
+**Output:**
+```
+Removing service wpstack_db
+Removing service wpstack_wordpress
+Removing network wpstack_default
+```
+
+![](stack%20rm.png)
+
+### Step 17: Verify Stack Removal
+
+Confirm all services are removed:
+
+```bash
+docker service ls
+```
+
+**Output:**
+```
+ID                  NAME                MODE                REPLICAS            IMAGE
+```
+
 ![](list%20of%20service(empty).png)
 
-### Step 14: Leave the Swarm
+Check that no containers are running:
 
-To remove a node from the swarm:
+```bash
+docker ps
+```
 
-**On Manager Node:**
+### Step 18: Clean Up Volumes (Optional)
+
+Remove orphaned volumes:
+
+```bash
+docker volume prune
+```
+
+This frees up disk space from volumes no longer in use.
+
+### Step 19: Leave Swarm (Optional)
+
+To disable Swarm mode:
+
 ```bash
 docker swarm leave --force
 ```
 
-**On Worker Node:**
+The `--force` flag is needed for manager nodes.
+
+## When to Use Each Tool
+
+### Docker Compose
+- **Use Case**: Local development and testing
+- **Command**: `docker compose up -d`
+- **Single Host**: Yes
+- **Scaling**: Manual only
+
+### Docker Stack (Swarm)
+- **Use Case**: Small to medium production deployments
+- **Command**: `docker stack deploy -c docker-compose.yml <stack-name>`
+- **Multiple Hosts**: Yes
+- **Scaling**: Dynamic with `docker service scale`
+- **Failover**: Automatic
+
+### Kubernetes
+- **Use Case**: Large-scale, complex production environments
+- **Multiple Hosts**: Yes
+- **Scaling**: Dynamic and sophisticated
+- **Failover**: Advanced with health checks
+
+## Key Commands Quick Reference
+
 ```bash
-docker swarm leave
+# Initialize Swarm
+docker swarm init
+
+# Deploy stack
+docker stack deploy -c docker-compose.yml <stack-name>
+
+# List services
+docker service ls
+
+# Scale service
+docker service scale <stack-name_service-name>=<replicas>
+
+# See service tasks
+docker service ps <service-name>
+
+# Remove stack
+docker stack rm <stack-name>
+
+# Leave Swarm (if needed)
+docker swarm leave --force
+
+# Get join token for workers
+docker swarm join-token worker
+
+# Join worker to swarm
+docker swarm join --token <token> <manager-ip>:2377
+
+# List nodes
+docker node ls
 ```
-
-## Common Swarm Commands
-
-| Command | Purpose |
-|---------|---------|
-| `docker swarm init` | Initialize swarm mode |
-| `docker swarm join-token worker` | Get worker join token |
-| `docker swarm join-token manager` | Get manager join token |
-| `docker node ls` | List all nodes |
-| `docker node promote <node-id>` | Promote worker to manager |
-| `docker node demote <node-id>` | Demote manager to worker |
-| `docker service create` | Create a service |
-| `docker service ls` | List all services |
-| `docker service ps <service>` | List tasks of a service |
-| `docker service scale <service>=<replicas>` | Scale a service |
-| `docker service update` | Update service configuration |
-| `docker service rm <service>` | Remove a service |
-| `docker stack deploy` | Deploy a stack |
-| `docker stack ls` | List stacks |
-| `docker stack rm <stack>` | Remove a stack |
-
-## Troubleshooting
-
-### Node Not Joining
-- Check firewall allows port 2377 (manager), 7946 (node comm), 4789 (overlay)
-- Verify IP connectivity between nodes
-- Check join token is correct and not expired
-
-### Service Not Starting
-- Check node has sufficient resources
-- Verify image is available or can be pulled
-- Check service constraints and placement rules
-
-### High Latency
-- Ensure low-latency network between manager and workers
-- Reduce number of manager nodes if experiencing consensus issues
-- Use placement constraints to keep related services on same node
 
 ## Result
 
-Docker Swarm was successfully configured with multiple nodes, services were deployed and scaled across the cluster, and load balancing was verified. Swarm automatically manages container placement, scaling, and failover, providing a complete orchestration solution for multi-container applications.
+Docker Stack successfully deployed a multi-container WordPress application across a Docker Swarm cluster. The application demonstrated:
+- Multi-service orchestration
+- Automatic container placement
+- Dynamic service scaling
+- Automatic failover and self-healing
+- Load balancing across replicas
+
+All services maintained desired state and continued operation despite container failures.
 
 ## Conclusion
 
-Docker Swarm provides a lightweight, integrated container orchestration solution that is easy to set up and manage. While simpler than Kubernetes, it is ideal for teams looking for quick deployment of clustered applications without the overhead of additional tools. Swarm's built-in load balancing, automatic scaling, and high availability features make it suitable for production deployments at small to medium scale.
+Docker Stack provides a simple yet powerful way to orchestrate multi-container applications in production. By using the same Docker Compose format for both development and production, teams can ensure consistency across environments. Swarm's automatic scaling, failover, and self-healing capabilities make it suitable for production deployments without the complexity of Kubernetes. The progression from `docker run` → Compose → Swarm → Kubernetes allows teams to scale their infrastructure as requirements grow.
 
 ## Viva-Voce Questions
 
-1. What is the difference between Docker Swarm and Kubernetes?
-2. How does Docker Swarm elect a leader among manager nodes?
-3. What is the purpose of overlay networks in Docker Swarm?
-4. How does load balancing work in Docker Swarm?
-5. What happens when a worker node goes offline?
-6. How do you ensure a service always runs on manager nodes only?
-7. What is the difference between `docker service scale` and replica limits?
-8. How would you update a service without downtime?
+1. What is the difference between `docker compose up` and `docker stack deploy`?
+2. How does Docker Swarm automatically replace failed containers?
+3. What is the difference between scaling and rolling updates?
+4. Why is overlay networking used in Docker Swarm?
+5. When would you choose Docker Swarm over Kubernetes?
+6. How does the `--scale` flag work in docker service?
+7. What happens when you kill a container in a scaled service?
+8. How would you deploy a new version of a service without downtime?
 
 ## References
 
-1. Docker Swarm Official Documentation
-2. Docker Service Documentation
-3. Docker Stack Compose File Reference
+1. Docker Stack Official Documentation
+2. Docker Swarm Mode Documentation
+3. Docker Compose File Reference
+4. Docker Service Scale Documentation
