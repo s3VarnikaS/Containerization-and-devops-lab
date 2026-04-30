@@ -99,7 +99,7 @@
 ---
 
 ### 🧪 Experiment 12
-🔗 [Kubernetes Deployment and Orchestration](lab/Exp12/intro2.md)  
+🔗 [Kubernetes Deployment and Orchestration](lab/Exp12/intro.md)  
 📌 *Kubernetes, Pods, Deployments, Services, Scaling*
 
 ---
